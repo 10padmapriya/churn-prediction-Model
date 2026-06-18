@@ -1,0 +1,78 @@
+data:
+  raw_path: data/raw/telco_churn.csv
+  processed_path: data/processed/telco_processed.csv
+  target_column: Churn
+  id_column: customerID
+  test_size: 0.2
+  random_state: 42
+business:
+  cost_false_negative: 500
+  cost_false_positive: 20
+  avg_monthly_revenue: 65
+  avg_clv_months: 24
+features:
+  binary_cols:
+  - Partner
+  - Dependents
+  - PhoneService
+  - PaperlessBilling
+  - Churn
+  onehot_cols:
+  - MultipleLines
+  - InternetService
+  - OnlineSecurity
+  - OnlineBackup
+  - DeviceProtection
+  - TechSupport
+  - StreamingTV
+  - StreamingMovies
+  - Contract
+  - PaymentMethod
+  - gender
+  numeric_cols:
+  - tenure
+  - MonthlyCharges
+  - TotalCharges
+  - SeniorCitizen
+  engineered:
+  - tenure_group
+  - avg_monthly_spend
+  - service_count
+  - has_online_services
+  - is_high_value
+  - contract_risk_score
+models:
+  logistic_regression:
+    C: 1.0
+    max_iter: 1000
+    class_weight: balanced
+    random_state: 42
+  xgboost:
+    n_estimators: 300
+    max_depth: 5
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    scale_pos_weight: 2.77
+    eval_metric: logloss
+    random_state: 42
+  lightgbm:
+    n_estimators: 300
+    max_depth: 5
+    learning_rate: 0.05
+    num_leaves: 31
+    subsample: 0.8
+    class_weight: balanced
+    random_state: 42
+training:
+  use_smote: true
+  smote_sampling_strategy: 0.5
+  cv_folds: 5
+  scoring_metric: roc_auc
+  default_threshold: 0.13038
+api:
+  host: 0.0.0.0
+  port: 8000
+  model_path: data/processed/best_model.joblib
+  preprocessor_path: data/processed/preprocessor.joblib
+  feature_names_path: data/processed/feature_names.joblib
