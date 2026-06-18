@@ -5,32 +5,38 @@ Train multiple models, optimize decision threshold for business cost matrix,
 evaluate with full metrics, and save the best model + preprocessor.
 """
 
-import numpy as np
-import pandas as pd
-import yaml
-import joblib
 import logging
 from pathlib import Path
 
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import StratifiedKFold, cross_val_score
-from sklearn.metrics import (
-    roc_auc_score, classification_report, confusion_matrix,
-    precision_recall_curve, roc_curve, average_precision_score,
-)
-from xgboost import XGBClassifier
-from lightgbm import LGBMClassifier
+import joblib
+import numpy as np
 from imblearn.over_sampling import SMOTE
+from lightgbm import LGBMClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    average_precision_score,
+    confusion_matrix,
+    precision_recall_curve,
+    roc_auc_score,
+    roc_curve,
+)
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+from xgboost import XGBClassifier
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s"
+)
 
 
 # ─────────────────────────────────────────────
 # Cost-sensitive threshold optimization
 # ─────────────────────────────────────────────
 
-def optimize_threshold(y_true, y_prob, cost_fn: float, cost_fp: float) -> tuple[float, float]:
+
+def optimize_threshold(
+    y_true, y_prob, cost_fn: float, cost_fp: float
+) -> tuple[float, float]:
     """
     Find the decision threshold that minimizes total business cost.
 
@@ -52,13 +58,16 @@ def optimize_threshold(y_true, y_prob, cost_fn: float, cost_fp: float) -> tuple[
     best_threshold = thresholds[best_idx]
     best_cost = costs[best_idx]
 
-    logger.info(f"Optimal threshold: {best_threshold:.3f} | Min cost: ${best_cost:,.0f}")
+    logger.info(
+        f"Optimal threshold: {best_threshold:.3f} | Min cost: ${best_cost:,.0f}"
+    )
     return best_threshold, best_cost
 
 
 # ─────────────────────────────────────────────
 # Model definitions
 # ─────────────────────────────────────────────
+
 
 def get_models(config: dict) -> dict:
     cfg = config["models"]
@@ -73,10 +82,13 @@ def get_models(config: dict) -> dict:
 # Full evaluation report
 # ─────────────────────────────────────────────
 
+
 def evaluate_model(
     model,
-    X_train, y_train,
-    X_test, y_test,
+    X_train,
+    y_train,
+    X_test,
+    y_test,
     config: dict,
     threshold: float = None,
 ) -> dict:
@@ -93,15 +105,18 @@ def evaluate_model(
     tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
 
     # Business impact calculations
-    n_customers = len(y_test)
     actual_churners = y_test.sum()
     caught_churners = tp
     missed_churners = fn
     false_alarms = fp
 
-    avg_clv = config["business"]["avg_monthly_revenue"] * config["business"]["avg_clv_months"]
+    avg_clv = (
+        config["business"]["avg_monthly_revenue"] * config["business"]["avg_clv_months"]
+    )
     revenue_saved = caught_churners * avg_clv
-    retention_cost = (caught_churners + false_alarms) * config["business"]["cost_false_positive"]
+    retention_cost = (caught_churners + false_alarms) * config["business"][
+        "cost_false_positive"
+    ]
     net_value = revenue_saved - retention_cost
 
     return {
@@ -113,7 +128,10 @@ def evaluate_model(
         "recall": tp / (tp + fn) if (tp + fn) > 0 else 0,
         "f1": 2 * tp / (2 * tp + fp + fn) if (2 * tp + fp + fn) > 0 else 0,
         # Confusion matrix
-        "tp": int(tp), "fp": int(fp), "fn": int(fn), "tn": int(tn),
+        "tp": int(tp),
+        "fp": int(fp),
+        "fn": int(fn),
+        "tn": int(tn),
         # Business impact
         "actual_churners": int(actual_churners),
         "caught_churners": int(caught_churners),
@@ -132,9 +150,12 @@ def evaluate_model(
 # Training pipeline
 # ─────────────────────────────────────────────
 
+
 def train_all_models(
-    X_train, y_train,
-    X_test, y_test,
+    X_train,
+    y_train,
+    X_test,
+    y_test,
     config: dict,
     feature_names: list[str],
 ) -> tuple[object, dict, dict]:
@@ -143,7 +164,9 @@ def train_all_models(
     """
     models = get_models(config)
     results = {}
-    cv = StratifiedKFold(n_splits=config["training"]["cv_folds"], shuffle=True, random_state=42)
+    cv = StratifiedKFold(
+        n_splits=config["training"]["cv_folds"], shuffle=True, random_state=42
+    )
 
     # SMOTE: only applied to training data, never test
     if config["training"]["use_smote"]:
@@ -165,8 +188,12 @@ def train_all_models(
 
         # Cross-validated AUC on training set
         cv_scores = cross_val_score(
-            model, X_train_res, y_train_res,
-            cv=cv, scoring="roc_auc", n_jobs=-1,
+            model,
+            X_train_res,
+            y_train_res,
+            cv=cv,
+            scoring="roc_auc",
+            n_jobs=-1,
         )
         logger.info(f"  CV AUC: {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
 
@@ -174,7 +201,9 @@ def train_all_models(
         model.fit(X_train_res, y_train_res)
 
         # Evaluate on held-out test set (no SMOTE applied here)
-        metrics = evaluate_model(model, X_train_res, y_train_res, X_test, y_test, config)
+        metrics = evaluate_model(
+            model, X_train_res, y_train_res, X_test, y_test, config
+        )
         metrics["cv_auc_mean"] = cv_scores.mean()
         metrics["cv_auc_std"] = cv_scores.std()
         results[name] = metrics
@@ -204,5 +233,7 @@ def save_artifacts(model, preprocessor, feature_names, config, engineer=None):
     joblib.dump(feature_names, out / "feature_names.joblib")
     if engineer is not None:
         joblib.dump(engineer, out / "engineer.joblib")
-        logger.info(f"Engineer persisted (monthly_charges_75th_={engineer.monthly_charges_75th_:.2f})")
+        logger.info(
+            f"Engineer persisted (monthly_charges_75th_={engineer.monthly_charges_75th_:.2f})"
+        )
     logger.info("Artifacts saved → data/processed/")

@@ -10,23 +10,23 @@ Endpoints:
   GET  /model/performance   — stored eval metrics for the dashboard
 """
 
-import numpy as np
-import pandas as pd
-import joblib
-import json
-import yaml
-import logging
-from pathlib import Path
-from typing import Optional
-from contextlib import asynccontextmanager
-
-from fastapi import FastAPI, HTTPException, UploadFile, File
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
 import io
+import json
+import logging
 
 # Local imports
 import sys
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+import joblib
+import numpy as np
+import pandas as pd
+import yaml
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from src.features.engineering import ChurnFeatureEngineer
@@ -41,6 +41,7 @@ logging.basicConfig(level=logging.INFO)
 
 app_state = {}
 
+
 def load_artifacts():
     config = yaml.safe_load(open("configs/config.yaml"))
     model = joblib.load(config["api"]["model_path"])
@@ -52,6 +53,7 @@ def load_artifacts():
     metrics = json.loads(metrics_path.read_text()) if metrics_path.exists() else {}
 
     from pathlib import Path as _Path
+
     engineer_path = _Path("data/processed/engineer.joblib")
     engineer = joblib.load(engineer_path) if engineer_path.exists() else None
 
@@ -88,7 +90,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # tighten in production
+    allow_origins=["*"],  # tighten in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -98,6 +100,7 @@ app.add_middleware(
 # ─────────────────────────────────────────────
 # Pydantic schemas
 # ─────────────────────────────────────────────
+
 
 class CustomerFeatures(BaseModel):
     gender: str = Field(...)
@@ -124,7 +127,7 @@ class CustomerFeatures(BaseModel):
 class PredictionResponse(BaseModel):
     churn_probability: float
     churn_prediction: bool
-    risk_tier: str         # "Low" / "Medium" / "High"
+    risk_tier: str  # "Low" / "Medium" / "High"
     threshold_used: float
     estimated_clv_at_risk: float
 
@@ -138,6 +141,7 @@ class ExplainResponse(BaseModel):
 # ─────────────────────────────────────────────
 # Helper
 # ─────────────────────────────────────────────
+
 
 def customer_to_df(customer: CustomerFeatures) -> pd.DataFrame:
     return pd.DataFrame([customer.model_dump()])
@@ -165,6 +169,7 @@ def risk_tier(prob: float) -> str:
 # ─────────────────────────────────────────────
 # Endpoints
 # ─────────────────────────────────────────────
+
 
 @app.get("/health")
 async def health():
@@ -224,14 +229,19 @@ async def predict_batch(file: UploadFile = File(...)):
         probs = app_state["model"].predict_proba(X)[:, 1]
         threshold = app_state["threshold"]
         config = app_state["config"]
-        avg_clv = config["business"]["avg_monthly_revenue"] * config["business"]["avg_clv_months"]
+        avg_clv = (
+            config["business"]["avg_monthly_revenue"]
+            * config["business"]["avg_clv_months"]
+        )
 
-        results = pd.DataFrame({
-            "churn_probability": probs.round(4),
-            "churn_prediction": probs >= threshold,
-            "risk_tier": [risk_tier(p) for p in probs],
-            "clv_at_risk": (probs * avg_clv).round(2),
-        })
+        results = pd.DataFrame(
+            {
+                "churn_probability": probs.round(4),
+                "churn_prediction": probs >= threshold,
+                "risk_tier": [risk_tier(p) for p in probs],
+                "clv_at_risk": (probs * avg_clv).round(2),
+            }
+        )
 
         return {
             "total_customers": len(results),
@@ -249,8 +259,7 @@ async def predict_batch(file: UploadFile = File(...)):
 async def explain(customer: CustomerFeatures):
     """Return SHAP-based explanation for one customer."""
     try:
-        import shap
-        from src.models.explain import get_explainer, explain_single_customer
+        from src.models.explain import explain_single_customer, get_explainer
 
         df = customer_to_df(customer)
         X = preprocess_input(df)
@@ -279,7 +288,6 @@ async def model_performance():
     metrics = app_state.get("metrics", {})
     if not metrics:
         raise HTTPException(
-            status_code=404,
-            detail="Metrics not found. Run training pipeline first."
+            status_code=404, detail="Metrics not found. Run training pipeline first."
         )
     return metrics

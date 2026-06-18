@@ -5,17 +5,13 @@ Feature engineering and sklearn-compatible preprocessing pipeline.
 All transformations are fit on train set only — no leakage.
 """
 
-import pandas as pd
-import numpy as np
-import yaml
-import joblib
 import logging
-from pathlib import Path
 
-from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +19,7 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────
 # Custom transformer: domain feature engineering
 # ─────────────────────────────────────────────
+
 
 class ChurnFeatureEngineer(BaseEstimator, TransformerMixin):
     """
@@ -57,8 +54,12 @@ class ChurnFeatureEngineer(BaseEstimator, TransformerMixin):
 
         # Count of add-on services: more services = more locked in
         service_cols = [
-            "OnlineSecurity", "OnlineBackup", "DeviceProtection",
-            "TechSupport", "StreamingTV", "StreamingMovies",
+            "OnlineSecurity",
+            "OnlineBackup",
+            "DeviceProtection",
+            "TechSupport",
+            "StreamingTV",
+            "StreamingMovies",
         ]
         X["service_count"] = (X[service_cols] == "Yes").sum(axis=1)
 
@@ -68,9 +69,9 @@ class ChurnFeatureEngineer(BaseEstimator, TransformerMixin):
         ).astype(int)
 
         # High-value customer flag
-        X["is_high_value"] = (
-            X["MonthlyCharges"] > self.monthly_charges_75th_
-        ).astype(int)
+        X["is_high_value"] = (X["MonthlyCharges"] > self.monthly_charges_75th_).astype(
+            int
+        )
 
         # Contract risk score (higher = riskier)
         contract_risk = {
@@ -87,6 +88,7 @@ class ChurnFeatureEngineer(BaseEstimator, TransformerMixin):
 # Build full sklearn preprocessing pipeline
 # ─────────────────────────────────────────────
 
+
 def build_preprocessor(config: dict) -> ColumnTransformer:
     """
     Returns a ColumnTransformer that:
@@ -94,8 +96,11 @@ def build_preprocessor(config: dict) -> ColumnTransformer:
     - One-hot encodes categoricals (drop='first' to avoid multicollinearity)
     """
     numeric_cols = config["features"]["numeric_cols"] + [
-        "avg_monthly_spend", "service_count",
-        "has_online_services", "is_high_value", "contract_risk_score",
+        "avg_monthly_spend",
+        "service_count",
+        "has_online_services",
+        "is_high_value",
+        "contract_risk_score",
     ]
 
     categorical_cols = (
@@ -104,13 +109,22 @@ def build_preprocessor(config: dict) -> ColumnTransformer:
         + ["tenure_group"]
     )
 
-    numeric_transformer = Pipeline(steps=[
-        ("scaler", StandardScaler()),
-    ])
+    numeric_transformer = Pipeline(
+        steps=[
+            ("scaler", StandardScaler()),
+        ]
+    )
 
-    categorical_transformer = Pipeline(steps=[
-        ("onehot", OneHotEncoder(handle_unknown="ignore", drop="first", sparse_output=False)),
-    ])
+    categorical_transformer = Pipeline(
+        steps=[
+            (
+                "onehot",
+                OneHotEncoder(
+                    handle_unknown="ignore", drop="first", sparse_output=False
+                ),
+            ),
+        ]
+    )
 
     preprocessor = ColumnTransformer(
         transformers=[
@@ -159,7 +173,9 @@ def prepare_features(
         X = engineer.fit_transform(X)
     else:
         if engineer is None:
-            raise ValueError("Must pass a fitted engineer when fit=False to prevent leakage.")
+            raise ValueError(
+                "Must pass a fitted engineer when fit=False to prevent leakage."
+            )
         X = engineer.transform(X)
 
     # Step 2: sklearn preprocessing
@@ -170,6 +186,8 @@ def prepare_features(
         X_processed = preprocessor.transform(X)
 
     feature_names = get_feature_names(preprocessor)
-    logger.info(f"Feature matrix: {X_processed.shape[0]:,} rows × {X_processed.shape[1]} features")
+    logger.info(
+        f"Feature matrix: {X_processed.shape[0]:,} rows × {X_processed.shape[1]} features"
+    )
 
     return X_processed, y, preprocessor, feature_names, engineer

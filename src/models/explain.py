@@ -6,11 +6,12 @@ Produces both global feature importance and per-customer explanations.
 This is what turns a black-box model into an actionable business tool.
 """
 
+import logging
+import warnings
+
 import numpy as np
 import pandas as pd
 import shap
-import logging
-import warnings
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)
@@ -62,8 +63,10 @@ def global_feature_importance(shap_df: pd.DataFrame, top_n: int = 20) -> pd.Data
     for direction and interaction effects.
     """
     importance = shap_df.abs().mean().sort_values(ascending=False)
-    return importance.head(top_n).reset_index().rename(
-        columns={"index": "feature", 0: "mean_abs_shap"}
+    return (
+        importance.head(top_n)
+        .reset_index()
+        .rename(columns={"index": "feature", 0: "mean_abs_shap"})
     )
 
 

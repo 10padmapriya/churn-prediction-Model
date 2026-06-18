@@ -5,21 +5,21 @@ Tests for ingestion, feature engineering, and API logic.
 Run with: pytest tests/ -v
 """
 
-import pytest
-import numpy as np
-import pandas as pd
-import yaml
 import sys
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.data.ingestion import clean_data, validate_data, load_config
+from src.data.ingestion import clean_data, load_config, validate_data
 from src.features.engineering import ChurnFeatureEngineer, prepare_features
 from src.models.train import optimize_threshold
 
-
 # ── Fixtures ──────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def raw_df():
@@ -37,6 +37,7 @@ def config():
 
 
 # ── Data ingestion tests ──────────────────────────────────────────
+
 
 class TestIngestion:
     def test_shape(self, raw_df):
@@ -63,13 +64,20 @@ class TestIngestion:
 
 # ── Feature engineering tests ─────────────────────────────────────
 
+
 class TestFeatureEngineering:
     def test_engineer_adds_columns(self, clean_df):
         df = clean_df.drop(columns=["Churn"])
         eng = ChurnFeatureEngineer()
         out = eng.fit_transform(df)
-        for col in ["tenure_group", "service_count", "is_high_value",
-                    "contract_risk_score", "avg_monthly_spend", "has_online_services"]:
+        for col in [
+            "tenure_group",
+            "service_count",
+            "is_high_value",
+            "contract_risk_score",
+            "avg_monthly_spend",
+            "has_online_services",
+        ]:
             assert col in out.columns, f"Missing engineered column: {col}"
 
     def test_service_count_range(self, clean_df):
@@ -97,6 +105,7 @@ class TestFeatureEngineering:
 
 # ── Threshold optimization tests ──────────────────────────────────
 
+
 class TestThresholdOptimization:
     def test_threshold_in_valid_range(self):
         np.random.seed(42)
@@ -118,6 +127,7 @@ class TestThresholdOptimization:
 
 # ── Config tests ──────────────────────────────────────────────────
 
+
 class TestConfig:
     def test_config_loads(self, config):
         assert "data" in config
@@ -126,7 +136,10 @@ class TestConfig:
         assert "features" in config
 
     def test_cost_matrix_sensible(self, config):
-        assert config["business"]["cost_false_negative"] > config["business"]["cost_false_positive"]
+        assert (
+            config["business"]["cost_false_negative"]
+            > config["business"]["cost_false_positive"]
+        )
 
     def test_data_paths_defined(self, config):
         assert "raw_path" in config["data"]

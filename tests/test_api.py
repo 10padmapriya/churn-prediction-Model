@@ -7,25 +7,24 @@ Uses httpx.AsyncClient with ASGITransport — no running server needed.
 Run with: pytest tests/test_api.py -v
 """
 
-import pytest
-import pytest_asyncio
-import asyncio
-import json
 import io
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import httpx
 from fastapi.testclient import TestClient
 
 # ── Fixtures ──────────────────────────────────────────────────────
+
 
 @pytest.fixture(scope="module")
 def client():
     """Synchronous test client — loads model once per module."""
     from src.api.main import app
+
     with TestClient(app) as c:
         yield c
 
@@ -77,6 +76,7 @@ LOW_RISK_CUSTOMER = {
 
 # ── Health endpoint ───────────────────────────────────────────────
 
+
 class TestHealth:
     def test_health_ok(self, client):
         r = client.get("/health")
@@ -98,6 +98,7 @@ class TestHealth:
 
 
 # ── Predict endpoint ──────────────────────────────────────────────
+
 
 class TestPredict:
     def test_predict_returns_200(self, client):
@@ -155,6 +156,7 @@ class TestPredict:
 
 # ── Explain endpoint ──────────────────────────────────────────────
 
+
 class TestExplain:
     def test_explain_returns_200(self, client):
         r = client.post("/explain", json=VALID_CUSTOMER)
@@ -180,12 +182,17 @@ class TestExplain:
         assert 1 <= len(d["top_drivers"]) <= 10
 
     def test_explain_probability_matches_predict(self, client):
-        prob_predict = client.post("/predict", json=VALID_CUSTOMER).json()["churn_probability"]
-        prob_explain = client.post("/explain", json=VALID_CUSTOMER).json()["churn_probability"]
+        prob_predict = client.post("/predict", json=VALID_CUSTOMER).json()[
+            "churn_probability"
+        ]
+        prob_explain = client.post("/explain", json=VALID_CUSTOMER).json()[
+            "churn_probability"
+        ]
         assert abs(prob_predict - prob_explain) < 1e-4
 
 
 # ── Model performance endpoint ────────────────────────────────────
+
 
 class TestModelPerformance:
     def test_performance_returns_200(self, client):
@@ -215,12 +222,15 @@ class TestModelPerformance:
 
 # ── Batch prediction endpoint ─────────────────────────────────────
 
+
 class TestBatch:
     def _make_csv(self, n=10):
         """Build a minimal valid CSV for batch prediction."""
         import pandas as pd
-        rows = [VALID_CUSTOMER.copy() for _ in range(n // 2)] + \
-               [LOW_RISK_CUSTOMER.copy() for _ in range(n - n // 2)]
+
+        rows = [VALID_CUSTOMER.copy() for _ in range(n // 2)] + [
+            LOW_RISK_CUSTOMER.copy() for _ in range(n - n // 2)
+        ]
         buf = io.StringIO()
         pd.DataFrame(rows).to_csv(buf, index=False)
         return buf.getvalue().encode()

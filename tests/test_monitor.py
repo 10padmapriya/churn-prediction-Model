@@ -5,19 +5,15 @@ Tests for PSI-based drift detection and prediction monitoring.
 Run with: pytest tests/test_monitor.py -v
 """
 
-import pytest
-import numpy as np
-import pandas as pd
 import sys
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.models.monitor import (
-    compute_psi,
-    compute_all_psi,
-    monitor_prediction_drift,
-)
+from src.models.monitor import compute_all_psi, compute_psi, monitor_prediction_drift
 
 
 class TestPSI:
@@ -66,16 +62,20 @@ class TestPSI:
     def test_compute_all_psi_returns_dataframe(self):
         """compute_all_psi should return a sorted DataFrame."""
         np.random.seed(42)
-        ref = pd.DataFrame({
-            "MonthlyCharges": np.random.normal(65, 20, 500),
-            "tenure":         np.random.exponential(30, 500),
-            "TotalCharges":   np.random.normal(1500, 800, 500),
-        })
-        cur = pd.DataFrame({
-            "MonthlyCharges": np.random.normal(75, 25, 200),  # drifted
-            "tenure":         np.random.exponential(30, 200),
-            "TotalCharges":   np.random.normal(1500, 800, 200),
-        })
+        ref = pd.DataFrame(
+            {
+                "MonthlyCharges": np.random.normal(65, 20, 500),
+                "tenure": np.random.exponential(30, 500),
+                "TotalCharges": np.random.normal(1500, 800, 500),
+            }
+        )
+        cur = pd.DataFrame(
+            {
+                "MonthlyCharges": np.random.normal(75, 25, 200),  # drifted
+                "tenure": np.random.exponential(30, 200),
+                "TotalCharges": np.random.normal(1500, 800, 200),
+            }
+        )
         result = compute_all_psi(ref, cur, ["MonthlyCharges", "tenure", "TotalCharges"])
         assert isinstance(result, pd.DataFrame)
         assert "feature" in result.columns
@@ -103,7 +103,9 @@ class TestPSI:
 
     def test_ignores_missing_columns(self):
         """Features not in both DataFrames should be silently skipped."""
-        ref = pd.DataFrame({"a": np.random.normal(0, 1, 100), "b": np.random.normal(0, 1, 100)})
+        ref = pd.DataFrame(
+            {"a": np.random.normal(0, 1, 100), "b": np.random.normal(0, 1, 100)}
+        )
         cur = pd.DataFrame({"a": np.random.normal(0, 1, 50)})  # b missing
         result = compute_all_psi(ref, cur, ["a", "b", "c_nonexistent"])
         assert len(result) == 1
@@ -131,7 +133,13 @@ class TestPredictionDrift:
         ref = np.array([0.2, 0.3, 0.25])
         cur = np.array([0.5, 0.6, 0.55])
         result = monitor_prediction_drift(ref, cur)
-        for key in ["reference_mean_prob", "current_mean_prob", "delta", "status", "recommendation"]:
+        for key in [
+            "reference_mean_prob",
+            "current_mean_prob",
+            "delta",
+            "status",
+            "recommendation",
+        ]:
             assert key in result
 
     def test_delta_is_absolute(self):

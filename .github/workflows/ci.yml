@@ -37,7 +37,7 @@ jobs:
         run: black --check src/ tests/ train_pipeline.py
 
       - name: isort (import order)
-        run: isort --check-only src/ tests/ train_pipeline.py
+        run: isort --profile black --check-only src/ tests/ train_pipeline.py
 
   # ──────────────────────────────────────────────────────────────
   # Job 2: Unit tests

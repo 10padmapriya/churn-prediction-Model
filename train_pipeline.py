@@ -13,15 +13,14 @@ Outputs (saved to data/processed/):
 """
 
 import json
-import yaml
 import logging
-import numpy as np
 from pathlib import Path
+
 from sklearn.model_selection import train_test_split
 
-from src.data.ingestion import run_ingestion, load_config
+from src.data.ingestion import load_config, run_ingestion
 from src.features.engineering import prepare_features
-from src.models.train import train_all_models, save_artifacts
+from src.models.train import save_artifacts, train_all_models
 
 logging.basicConfig(
     level=logging.INFO,
@@ -44,7 +43,6 @@ def main():
 
     # ── 3. Train/test split (stratified) ────────────────────────
     logger.info("\n[2/5] TRAIN/TEST SPLIT")
-    from sklearn.model_selection import train_test_split
     df_train, df_test = train_test_split(
         df,
         test_size=config["data"]["test_size"],
@@ -65,8 +63,10 @@ def main():
     # ── 5. Train & evaluate all models ──────────────────────────
     logger.info("\n[4/5] MODEL TRAINING")
     best_model, best_name, all_results = train_all_models(
-        X_train, y_train,
-        X_test, y_test,
+        X_train,
+        y_train,
+        X_test,
+        y_test,
         config,
         feature_names,
     )
@@ -77,11 +77,14 @@ def main():
 
     # ── Write optimal threshold back to config ────────────────────
     import yaml as _yaml
+
     best_threshold = all_results[best_name]["threshold"]
     config["training"]["default_threshold"] = round(float(best_threshold), 6)
     with open("configs/config.yaml", "w") as _f:
         _yaml.dump(config, _f, default_flow_style=False, sort_keys=False)
-    logger.info(f"Optimal threshold {best_threshold:.4f} written to configs/config.yaml")
+    logger.info(
+        f"Optimal threshold {best_threshold:.4f} written to configs/config.yaml"
+    )
 
     # Save metrics (strip non-serializable curve data)
     serializable_results = {}
@@ -92,8 +95,7 @@ def main():
     metrics_out = Path("data/processed/eval_metrics.json")
     with open(metrics_out, "w") as f:
         json.dump(
-            {"best_model": best_name, "models": serializable_results},
-            f, indent=2
+            {"best_model": best_name, "models": serializable_results}, f, indent=2
         )
     logger.info(f"Metrics saved → {metrics_out}")
 
@@ -107,7 +109,9 @@ def main():
     logger.info(f"Recall           : {best['recall']:.4f}")
     logger.info(f"Precision        : {best['precision']:.4f}")
     logger.info(f"Decision Threshold: {best['threshold']:.3f}")
-    logger.info(f"Churners caught  : {best['caught_churners']} / {best['actual_churners']}")
+    logger.info(
+        f"Churners caught  : {best['caught_churners']} / {best['actual_churners']}"
+    )
     logger.info(f"Revenue saved    : ${best['revenue_saved_usd']:>10,.0f}")
     logger.info(f"Retention cost   : ${best['retention_cost_usd']:>10,.0f}")
     logger.info(f"Net value        : ${best['net_value_usd']:>10,.0f}")
