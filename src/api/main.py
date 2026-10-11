@@ -18,6 +18,7 @@ import logging
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Annotated
 
 import joblib
 import numpy as np
@@ -43,7 +44,8 @@ app_state = {}
 
 
 def load_artifacts():
-    config = yaml.safe_load(open("configs/config.yaml"))
+    with open("configs/config.yaml") as f:
+        config = yaml.safe_load(f)
     model = joblib.load(config["api"]["model_path"])
     preprocessor = joblib.load(config["api"]["preprocessor_path"])
     feature_names = joblib.load(config["api"]["feature_names_path"])
@@ -204,12 +206,12 @@ async def predict(customer: CustomerFeatures):
             estimated_clv_at_risk=round(clv_at_risk, 2),
         )
     except Exception as e:
-        logger.error(f"Prediction error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Prediction error")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/predict/batch")
-async def predict_batch(file: UploadFile = File(...)):
+async def predict_batch(file: Annotated[UploadFile, File()]):
     """Accept CSV upload, return predictions for all rows."""
     try:
         contents = await file.read()
@@ -251,8 +253,8 @@ async def predict_batch(file: UploadFile = File(...)):
             "predictions": results.to_dict(orient="records"),
         }
     except Exception as e:
-        logger.error(f"Batch prediction error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Batch prediction error")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/explain", response_model=ExplainResponse)
@@ -278,8 +280,8 @@ async def explain(customer: CustomerFeatures):
             top_drivers=explanation["top_drivers"],
         )
     except Exception as e:
-        logger.error(f"Explain error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Explain error")
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/model/performance")

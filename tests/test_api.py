@@ -207,7 +207,7 @@ class TestModelPerformance:
     def test_performance_has_model_metrics(self, client):
         d = client.get("/model/performance").json()
         assert "models" in d
-        for name, m in d["models"].items():
+        for m in d["models"].values():
             assert "roc_auc" in m
             assert "recall" in m
             assert "net_value_usd" in m

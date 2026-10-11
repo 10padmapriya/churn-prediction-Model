@@ -93,13 +93,13 @@ class TestFeatureEngineering:
         assert set(out["contract_risk_score"].unique()).issubset({0, 1, 2})
 
     def test_prepare_features_shape(self, clean_df, config):
-        X, y, prep, names, eng = prepare_features(clean_df, config, fit=True)
+        X, y, _prep, names, _eng = prepare_features(clean_df, config, fit=True)
         assert X.shape[0] == len(clean_df)
         assert X.shape[1] == len(names)
         assert len(y) == len(clean_df)
 
     def test_no_nulls_in_processed(self, clean_df, config):
-        X, y, _, _, _ = prepare_features(clean_df, config, fit=True)
+        X, _y, _, _, _ = prepare_features(clean_df, config, fit=True)
         assert not np.isnan(X).any()
 
 
