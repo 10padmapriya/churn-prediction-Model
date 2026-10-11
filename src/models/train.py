@@ -50,7 +50,7 @@ def optimize_threshold(
 
     for t in thresholds:
         y_pred = (y_prob >= t).astype(int)
-        tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+        _tn, fp, fn, _tp = confusion_matrix(y_true, y_pred).ravel()
         total_cost = (fn * cost_fn) + (fp * cost_fp)
         costs.append(total_cost)
 
@@ -90,7 +90,7 @@ def evaluate_model(
     X_test,
     y_test,
     config: dict,
-    threshold: float = None,
+    threshold: float | None = None,
 ) -> dict:
     """Returns a full dict of metrics for one model."""
     y_prob = model.predict_proba(X_test)[:, 1]

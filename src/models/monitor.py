@@ -154,7 +154,8 @@ def run_monitoring_report(
 
     from src.features.engineering import ChurnFeatureEngineer
 
-    config = yaml.safe_load(open(config_path))
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
     reference_df = pd.read_csv(reference_path)
     current_df = pd.read_csv(current_path)
 
