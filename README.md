@@ -7,7 +7,7 @@
 
 An end-to-end ML system that predicts customer churn using **cost-sensitive classification**, served by a **FastAPI backend** with a **React dashboard** showing live business impact in dollar terms.
 
-> **Interview answer:** "I framed churn as a cost-sensitive problem — a missed churner costs $500 in lost CLV while a false alarm costs $20 in retention spend. I optimized the decision threshold for that asymmetric cost matrix, shifting recall from 54% to 99% with $555K net value on the test set."
+> **Interview answer:** "I framed churn as a cost-sensitive problem — a missed churner costs $500 in lost CLV while a false alarm costs $20 in retention spend. I optimized the decision threshold for that asymmetric cost matrix, shifting recall from 80% to 99% with $555K net value on the test set."
 
 ---
 
@@ -175,7 +175,7 @@ Default classifiers use threshold=0.5 (optimises accuracy). This project minimis
 Total cost = (FN × $500) + (FP × $20)
 ```
 
-Optimal threshold: **0.13**, found by grid search over [0.05, 0.90]. This shifts recall from 54% → 99%.
+Optimal threshold: **0.13**, found by grid search over [0.05, 0.90]. This shifts recall from 80% → 99% (vs. the default 0.5 threshold).
 
 ### No-leakage feature engineering
 `ChurnFeatureEngineer` is a proper sklearn transformer. It's fit exclusively on training data and **persisted to `data/processed/engineer.joblib`**. The API loads this artifact — it does not refit on single-customer inputs (which would make `is_high_value` always 0).

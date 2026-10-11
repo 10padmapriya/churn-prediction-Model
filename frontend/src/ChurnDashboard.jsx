@@ -328,7 +328,7 @@ function PerformanceTab({ data, loading, error }) {
         )}
         <div style={{ marginTop: 12, padding: "10px 14px", background: C.accentSoft, borderRadius: 8, fontSize: 12, color: C.muted }}>
           Threshold is optimized for cost matrix (FN=$500 / FP=$20), not the default 0.5.
-          This shifts recall from ~54% → ~99% at the cost of precision.
+          This shifts recall from ~80% → ~99% at the cost of precision.
         </div>
       </Card>
 
