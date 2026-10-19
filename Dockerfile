@@ -2,6 +2,11 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# LightGBM needs the OpenMP runtime, which the slim image does not ship
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install dependencies first (layer caching)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -9,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy source code
 COPY . .
 
-# Train the model on container start if artifacts don't exist
+# Train the model at build time so the image ships with fresh artifacts
 RUN python train_pipeline.py
 
 EXPOSE 8000
